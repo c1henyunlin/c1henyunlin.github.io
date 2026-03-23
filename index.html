@@ -13,21 +13,22 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* 渐变背景 */
+        /* 背景图片样式 */
         body {
-            background: linear-gradient(135deg, #e0f7ff 0%, #f0e6ff 100%);
+            background: url("https://fangke.ogmua.cn/fangke/20260324/621695a74732a1197563ec9353cbbd56.jpg") no-repeat center center fixed;
+            background-size: cover;
             min-height: 100vh;
             padding: 20px;
         }
 
-        /* 容器样式 */
+        /* 容器样式 - 半透明背景 */
         .todo-container {
             max-width: 600px;
             margin: 0 auto;
-            background: white;
+            background: rgba(255, 255, 255, 0.92);
             padding: 30px;
             border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(56, 139, 253, 0.1);
+            box-shadow: 0 4px 20px rgba(56, 139, 253, 0.15);
         }
 
         /* 标题样式 - 带图标 */
@@ -115,7 +116,7 @@
             flex-wrap: wrap;
         }
 
-        .clear-completed-btn, .clear-all-btn {
+        .undo-btn, .clear-completed-btn, .clear-all-btn {
             padding: 8px 16px;
             border: none;
             border-radius: 8px;
@@ -123,6 +124,24 @@
             font-size: 14px;
             font-weight: 500;
             transition: all 0.3s ease;
+        }
+
+        /* 撤销按钮样式 */
+        .undo-btn {
+            background-color: #40a9ff;
+            color: white;
+        }
+
+        .undo-btn:hover {
+            background-color: #096dd9;
+            transform: translateY(-1px);
+        }
+
+        /* 禁用状态的撤销按钮 */
+        .undo-btn:disabled {
+            background-color: #b3d8ff;
+            cursor: not-allowed;
+            transform: none;
         }
 
         .clear-completed-btn {
@@ -427,8 +446,9 @@
             <button id="add-btn">➕ 添加任务</button>
         </div>
 
-        <!-- 操作按钮区域 -->
+        <!-- 操作按钮区域（新增撤销按钮） -->
         <div class="action-buttons">
+            <button class="undo-btn" id="undo-btn" disabled>↩️ 撤销上一步</button>
             <button class="clear-completed-btn">🗑️ 清空已完成</button>
             <button class="clear-all-btn">⚠️ 全部清空</button>
         </div>
@@ -483,15 +503,19 @@
         const editPriority = document.getElementById('edit-priority');
         const saveEditBtn = document.getElementById('save-edit');
         const cancelEditBtn = document.getElementById('cancel-edit');
+        const undoBtn = document.getElementById('undo-btn');
 
-        // 全局变量：当前编辑的任务ID
-        let currentEditId = null;
-
-        // 初始化任务列表
+        // 全局变量
         let todos = JSON.parse(localStorage.getItem('todos')) || [];
+        let currentEditId = null;
+        // 撤销栈：保存操作历史，最多保留20步
+        let undoStack = JSON.parse(localStorage.getItem('undoStack')) || [];
+        // 最大撤销步数
+        const MAX_UNDO_STEPS = 20;
 
-        // 页面加载时渲染任务列表
+        // 页面加载时渲染任务列表和更新撤销按钮状态
         renderTodos();
+        updateUndoBtnStatus();
 
         // ========== 事件监听 ==========
         // 添加任务
@@ -515,7 +539,52 @@
             currentEditId = null;
         });
 
+        // 撤销按钮
+        undoBtn.addEventListener('click', undoLastAction);
+
         // ========== 核心功能函数 ==========
+        // 保存当前状态到撤销栈（执行任何操作前调用）
+        function saveStateToUndoStack() {
+            // 深拷贝当前任务列表，避免引用问题
+            const currentState = JSON.parse(JSON.stringify(todos));
+            // 添加到撤销栈
+            undoStack.push(currentState);
+            // 限制撤销栈长度，避免占用过多内存
+            if (undoStack.length > MAX_UNDO_STEPS) {
+                undoStack.shift(); // 删除最旧的一步
+            }
+            // 保存撤销栈到本地存储
+            localStorage.setItem('undoStack', JSON.stringify(undoStack));
+            // 更新撤销按钮状态
+            updateUndoBtnStatus();
+        }
+
+        // 更新撤销按钮状态（有历史则启用，无则禁用）
+        function updateUndoBtnStatus() {
+            undoBtn.disabled = undoStack.length === 0;
+        }
+
+        // 撤销上一步操作
+        function undoLastAction() {
+            if (undoStack.length === 0) return;
+            
+            // 取出上一个状态
+            const lastState = undoStack.pop();
+            // 恢复任务列表
+            todos = lastState;
+            // 保存到本地存储
+            saveTodos();
+            // 更新撤销栈存储
+            localStorage.setItem('undoStack', JSON.stringify(undoStack));
+            // 重新渲染
+            renderTodos();
+            // 更新撤销按钮状态
+            updateUndoBtnStatus();
+            
+            // 提示
+            alert('已撤销上一步操作！');
+        }
+
         // 添加任务
         function addTodo() {
             const text = todoInput.value.trim();
@@ -523,6 +592,9 @@
                 alert('请输入待办事项内容！');
                 return;
             }
+
+            // 保存当前状态到撤销栈
+            saveStateToUndoStack();
 
             // 创建新任务对象（包含优先级）
             const newTodo = {
@@ -588,6 +660,8 @@
             document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
                 checkbox.addEventListener('change', (e) => {
                     const id = parseInt(e.target.dataset.id);
+                    // 保存当前状态到撤销栈
+                    saveStateToUndoStack();
                     toggleTodoStatus(id);
                 });
             });
@@ -596,7 +670,11 @@
             document.querySelectorAll('.delete-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id = parseInt(e.target.dataset.id);
-                    deleteTodo(id);
+                    if (confirm('确定要删除这个任务吗？')) {
+                        // 保存当前状态到撤销栈
+                        saveStateToUndoStack();
+                        deleteTodo(id);
+                    }
                 });
             });
 
@@ -623,11 +701,9 @@
 
         // 删除单个任务
         function deleteTodo(id) {
-            if (confirm('确定要删除这个任务吗？')) {
-                todos = todos.filter(todo => todo.id !== id);
-                saveTodos();
-                renderTodos();
-            }
+            todos = todos.filter(todo => todo.id !== id);
+            saveTodos();
+            renderTodos();
         }
 
         // 打开编辑弹窗
@@ -635,6 +711,9 @@
             // 找到要编辑的任务
             const todo = todos.find(t => t.id === id);
             if (!todo) return;
+
+            // 保存当前状态到撤销栈（编辑前）
+            saveStateToUndoStack();
 
             // 填充表单
             editInput.value = todo.text;
@@ -682,6 +761,8 @@
             }
 
             if (confirm(`确定要清空${completedCount}个已完成的任务吗？`)) {
+                // 保存当前状态到撤销栈
+                saveStateToUndoStack();
                 todos = todos.filter(todo => !todo.completed);
                 saveTodos();
                 renderTodos();
@@ -696,6 +777,8 @@
             }
 
             if (confirm('⚠️ 警告：此操作将删除所有任务，且无法恢复！\n确定要全部清空吗？')) {
+                // 保存当前状态到撤销栈
+                saveStateToUndoStack();
                 todos = [];
                 saveTodos();
                 renderTodos();
