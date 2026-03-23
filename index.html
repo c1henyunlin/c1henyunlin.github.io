@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的待办清单</title>
+    <style>
+        /* 全局样式重置 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* 背景图片样式 */
+        body {
+            background: url("https://fangke.ogmua.cn/fangke/20260324/c737cb7f1019c4d8fdbdd73a3fbca867.png") no-repeat center center fixed;
+            background-size: cover;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* 容器样式 - 半透明背景 */
+        .todo-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.92);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(56, 139, 253, 0.15);
+        }
+
+        /* 标题样式 - 带图标 */
+        .todo-title {
+            color: #165dff;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 28px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .todo-title i {
+            font-size: 32px;
+            color: #7b61ff;
+        }
+
+        /* 添加任务区域 */
+        .add-todo {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        #todo-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 16px;
+            border: 2px solid #e0e9ff;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #todo-input:focus {
+            border-color: #165dff;
+            box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
+        }
+
+        /* 优先级选择器 */
+        .priority-select {
+            padding: 12px 16px;
+            border: 2px solid #e0e9ff;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            background: white;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .priority-select:focus {
+            border-color: #165dff;
+            box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
+        }
+
+        #add-btn {
+            padding: 12px 24px;
+            background-color: #165dff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        #add-btn:hover {
+            background-color: #0047cc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(22, 93, 255, 0.2);
+        }
+
+        /* 操作按钮区域 */
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .undo-btn, .clear-completed-btn, .clear-all-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        /* 撤销按钮样式 */
+        .undo-btn {
+            background-color: #40a9ff;
+            color: white;
+        }
+
+        .undo-btn:hover {
+            background-color: #096dd9;
+            transform: translateY(-1px);
+        }
+
+        /* 禁用状态的撤销按钮 */
+        .undo-btn:disabled {
+            background-color: #b3d8ff;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .clear-completed-btn {
+            background-color: #7b61ff;
+            color: white;
+        }
+
+        .clear-completed-btn:hover {
+            background-color: #6247cc;
+            transform: translateY(-1px);
+        }
+
+        .clear-all-btn {
+            background-color: #ff7875;
+            color: white;
+        }
+
+        .clear-all-btn:hover {
+            background-color: #ff4d4f;
+            transform: translateY(-1px);
+        }
+
+        /* 统计区域 */
+        .todo-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background-color: #e8f3ff;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #165dff;
+        }
+
+        /* 任务列表 */
+        .todo-list {
+            list-style: none;
+            gap: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 单个任务项 - 优先级颜色 */
+        .todo-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background-color: #f8fbff;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        /* 优先级标识 */
+        .priority-tag {
+            width: 8px;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            border-radius: 10px 0 0 10px;
+        }
+
+        .priority-high {
+            background-color: #ff4d4f;
+        }
+
+        .priority-medium {
+            background-color: #faad14;
+        }
+
+        .priority-low {
+            background-color: #52c41a;
+        }
+
+        .todo-item {
+            padding-left: 20px;
+        }
+
+        .todo-item:hover {
+            box-shadow: 0 2px 8px rgba(22, 93, 255, 0.1);
+            transform: translateY(-1px);
+        }
+
+        /* 已完成任务样式 */
+        .todo-item.completed {
+            background-color: #f5f9ff;
+            opacity: 0.8;
+        }
+
+        .todo-checkbox {
+            width: 20px;
+            height: 20px;
+            margin-right: 15px;
+            cursor: pointer;
+            accent-color: #165dff;
+        }
+
+        .todo-text {
+            flex: 1;
+            font-size: 16px;
+            color: #333;
+            transition: all 0.3s ease;
+            padding-right: 10px;
+        }
+
+        .todo-item.completed .todo-text {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        /* 任务操作按钮组 */
+        .todo-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .edit-btn, .delete-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .edit-btn {
+            background-color: #1890ff;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background-color: #096dd9;
+            transform: translateY(-1px);
+        }
+
+        .delete-btn {
+            background-color: #ff4d4f;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background-color: #d9363e;
+            transform: translateY(-1px);
+        }
+
+        /* 空列表提示 */
+        .empty-tip {
+            text-align: center;
+            padding: 40px 0;
+            color: #999;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        .empty-tip i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: #d0dfff;
+            display: block;
+        }
+
+        /* 编辑任务弹窗 */
+        .edit-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .edit-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            color: #165dff;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .edit-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        #edit-input {
+            padding: 12px 16px;
+            border: 2px solid #e0e9ff;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        #edit-input:focus {
+            border-color: #165dff;
+        }
+
+        #edit-priority {
+            padding: 12px 16px;
+            border: 2px solid #e0e9ff;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            background: white;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .save-btn, .cancel-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .save-btn {
+            background-color: #165dff;
+            color: white;
+        }
+
+        .cancel-btn {
+            background-color: #f0f2f5;
+            color: #333;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .todo-container {
+                padding: 20px;
+            }
+
+            .todo-title {
+                font-size: 24px;
+            }
+
+            .add-todo {
+                flex-direction: column;
+            }
+
+            #add-btn, .priority-select {
+                width: 100%;
+            }
+
+            .action-buttons {
+                justify-content: center;
+            }
+
+            .todo-stats {
+                flex-direction: column;
+                gap: 5px;
+                text-align: center;
+            }
+        }
+    </style>
+    <!-- 引入图标库 -->
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="todo-container">
+        <!-- 标题带图标 -->
+        <h1 class="todo-title">
+            <i class="fas fa-clipboard-list"></i>
+            我的待办清单
+        </h1>
+        
+        <!-- 添加任务区域 -->
+        <div class="add-todo">
+            <input type="text" id="todo-input" placeholder="今天要做什么？">
+            <select class="priority-select" id="priority-select">
+                <option value="medium">中优先级</option>
+                <option value="high">高优先级</option>
+                <option value="low">低优先级</option>
+            </select>
+            <button id="add-btn">➕ 添加任务</button>
+        </div>
+
+        <!-- 操作按钮区域（新增撤销按钮） -->
+        <div class="action-buttons">
+            <button class="undo-btn" id="undo-btn" disabled>↩️ 撤销上一步</button>
+            <button class="clear-completed-btn">🗑️ 清空已完成</button>
+            <button class="clear-all-btn">⚠️ 全部清空</button>
+        </div>
+
+        <!-- 统计区域 -->
+        <div class="todo-stats">
+            <div>已完成: <span id="completed-count">0</span></div>
+            <div>未完成: <span id="pending-count">0</span></div>
+        </div>
+
+        <!-- 任务列表 -->
+        <ul class="todo-list" id="todo-list">
+            <li class="empty-tip">
+                <i class="fas fa-lightbulb"></i>
+                暂无待办事项<br>
+                快来添加今天的任务吧！
+            </li>
+        </ul>
+    </div>
+
+    <!-- 编辑任务弹窗 -->
+    <div class="edit-modal" id="edit-modal">
+        <div class="modal-content">
+            <h3 class="modal-title">编辑任务</h3>
+            <div class="edit-form">
+                <input type="text" id="edit-input" placeholder="修改任务内容...">
+                <select id="edit-priority">
+                    <option value="medium">中优先级</option>
+                    <option value="high">高优先级</option>
+                    <option value="low">低优先级</option>
+                </select>
+                <div class="modal-buttons">
+                    <button class="save-btn" id="save-edit">保存</button>
+                    <button class="cancel-btn" id="cancel-edit">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const todoInput = document.getElementById('todo-input');
+        const addBtn = document.getElementById('add-btn');
+        const todoList = document.getElementById('todo-list');
+        const completedCount = document.getElementById('completed-count');
+        const pendingCount = document.getElementById('pending-count');
+        const prioritySelect = document.getElementById('priority-select');
+        const clearCompletedBtn = document.querySelector('.clear-completed-btn');
+        const clearAllBtn = document.querySelector('.clear-all-btn');
+        const editModal = document.getElementById('edit-modal');
+        const editInput = document.getElementById('edit-input');
+        const editPriority = document.getElementById('edit-priority');
+        const saveEditBtn = document.getElementById('save-edit');
+        const cancelEditBtn = document.getElementById('cancel-edit');
+        const undoBtn = document.getElementById('undo-btn');
+
+        // 全局变量
+        let todos = JSON.parse(localStorage.getItem('todos')) || [];
+        let currentEditId = null;
+        // 撤销栈：保存操作历史，最多保留20步
+        let undoStack = JSON.parse(localStorage.getItem('undoStack')) || [];
+        // 最大撤销步数
+        const MAX_UNDO_STEPS = 20;
+
+        // 页面加载时渲染任务列表和更新撤销按钮状态
+        renderTodos();
+        updateUndoBtnStatus();
+
+        // ========== 事件监听 ==========
+        // 添加任务
+        addBtn.addEventListener('click', addTodo);
+        todoInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addTodo();
+        });
+
+        // 清空已完成
+        clearCompletedBtn.addEventListener('click', clearCompletedTodos);
+
+        // 全部清空
+        clearAllBtn.addEventListener('click', clearAllTodos);
+
+        // 编辑弹窗 - 保存
+        saveEditBtn.addEventListener('click', saveEditTodo);
+
+        // 编辑弹窗 - 取消
+        cancelEditBtn.addEventListener('click', () => {
+            editModal.classList.remove('active');
+            currentEditId = null;
+        });
+
+        // 撤销按钮
+        undoBtn.addEventListener('click', undoLastAction);
+
+        // ========== 核心功能函数 ==========
+        // 保存当前状态到撤销栈（执行任何操作前调用）
+        function saveStateToUndoStack() {
+            // 深拷贝当前任务列表，避免引用问题
+            const currentState = JSON.parse(JSON.stringify(todos));
+            // 添加到撤销栈
+            undoStack.push(currentState);
+            // 限制撤销栈长度，避免占用过多内存
+            if (undoStack.length > MAX_UNDO_STEPS) {
+                undoStack.shift(); // 删除最旧的一步
+            }
+            // 保存撤销栈到本地存储
+            localStorage.setItem('undoStack', JSON.stringify(undoStack));
+            // 更新撤销按钮状态
+            updateUndoBtnStatus();
+        }
+
+        // 更新撤销按钮状态（有历史则启用，无则禁用）
+        function updateUndoBtnStatus() {
+            undoBtn.disabled = undoStack.length === 0;
+        }
+
+        // 撤销上一步操作
+        function undoLastAction() {
+            if (undoStack.length === 0) return;
+            
+            // 取出上一个状态
+            const lastState = undoStack.pop();
+            // 恢复任务列表
+            todos = lastState;
+            // 保存到本地存储
+            saveTodos();
+            // 更新撤销栈存储
+            localStorage.setItem('undoStack', JSON.stringify(undoStack));
+            // 重新渲染
+            renderTodos();
+            // 更新撤销按钮状态
+            updateUndoBtnStatus();
+            
+            // 提示
+            alert('已撤销上一步操作！');
+        }
+
+        // 添加任务
+        function addTodo() {
+            const text = todoInput.value.trim();
+            if (!text) {
+                alert('请输入待办事项内容！');
+                return;
+            }
+
+            // 保存当前状态到撤销栈
+            saveStateToUndoStack();
+
+            // 创建新任务对象（包含优先级）
+            const newTodo = {
+                id: Date.now(), // 用时间戳作为唯一ID
+                text: text,
+                completed: false,
+                priority: prioritySelect.value // 优先级：high/medium/low
+            };
+
+            // 添加到任务列表并保存
+            todos.push(newTodo);
+            saveTodos();
+            renderTodos();
+
+            // 清空输入框，重置优先级
+            todoInput.value = '';
+            prioritySelect.value = 'medium';
+        }
+
+        // 渲染任务列表
+        function renderTodos() {
+            // 清空列表
+            todoList.innerHTML = '';
+
+            // 如果没有任务，显示友好提示
+            if (todos.length === 0) {
+                todoList.innerHTML = `
+                    <li class="empty-tip">
+                        <i class="fas fa-lightbulb"></i>
+                        暂无待办事项<br>
+                        快来添加今天的任务吧！
+                    </li>
+                `;
+                updateStats();
+                return;
+            }
+
+            // 遍历渲染每个任务
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+                li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+                li.innerHTML = `
+                    <div class="priority-tag priority-${todo.priority}"></div>
+                    <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''} data-id="${todo.id}">
+                    <span class="todo-text">${todo.text}</span>
+                    <div class="todo-actions">
+                        <button class="edit-btn" data-id="${todo.id}">✏️ 编辑</button>
+                        <button class="delete-btn" data-id="${todo.id}">🗑️ 删除</button>
+                    </div>
+                `;
+                todoList.appendChild(li);
+            });
+
+            // 添加事件监听
+            addEventListeners();
+            // 更新统计数据
+            updateStats();
+        }
+
+        // 为任务项添加事件监听
+        function addEventListeners() {
+            // 复选框 - 切换完成状态
+            document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    // 保存当前状态到撤销栈
+                    saveStateToUndoStack();
+                    toggleTodoStatus(id);
+                });
+            });
+
+            // 删除按钮
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    if (confirm('确定要删除这个任务吗？')) {
+                        // 保存当前状态到撤销栈
+                        saveStateToUndoStack();
+                        deleteTodo(id);
+                    }
+                });
+            });
+
+            // 编辑按钮
+            document.querySelectorAll('.edit-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.target.dataset.id);
+                    openEditModal(id);
+                });
+            });
+        }
+
+        // 切换任务完成状态
+        function toggleTodoStatus(id) {
+            todos = todos.map(todo => {
+                if (todo.id === id) {
+                    todo.completed = !todo.completed;
+                }
+                return todo;
+            });
+            saveTodos();
+            renderTodos();
+        }
+
+        // 删除单个任务
+        function deleteTodo(id) {
+            todos = todos.filter(todo => todo.id !== id);
+            saveTodos();
+            renderTodos();
+        }
+
+        // 打开编辑弹窗
+        function openEditModal(id) {
+            // 找到要编辑的任务
+            const todo = todos.find(t => t.id === id);
+            if (!todo) return;
+
+            // 保存当前状态到撤销栈（编辑前）
+            saveStateToUndoStack();
+
+            // 填充表单
+            editInput.value = todo.text;
+            editPriority.value = todo.priority;
+            currentEditId = id;
+
+            // 显示弹窗
+            editModal.classList.add('active');
+        }
+
+        // 保存编辑后的任务
+        function saveEditTodo() {
+            if (!currentEditId) return;
+            
+            const newText = editInput.value.trim();
+            if (!newText) {
+                alert('任务内容不能为空！');
+                return;
+            }
+
+            // 更新任务
+            todos = todos.map(todo => {
+                if (todo.id === currentEditId) {
+                    todo.text = newText;
+                    todo.priority = editPriority.value;
+                }
+                return todo;
+            });
+
+            // 保存并刷新
+            saveTodos();
+            renderTodos();
+            
+            // 关闭弹窗
+            editModal.classList.remove('active');
+            currentEditId = null;
+        }
+
+        // 清空已完成任务
+        function clearCompletedTodos() {
+            const completedCount = todos.filter(t => t.completed).length;
+            if (completedCount === 0) {
+                alert('当前没有已完成的任务！');
+                return;
+            }
+
+            if (confirm(`确定要清空${completedCount}个已完成的任务吗？`)) {
+                // 保存当前状态到撤销栈
+                saveStateToUndoStack();
+                todos = todos.filter(todo => !todo.completed);
+                saveTodos();
+                renderTodos();
+            }
+        }
+
+        // 全部清空
+        function clearAllTodos() {
+            if (todos.length === 0) {
+                alert('当前没有任务可清空！');
+                return;
+            }
+
+            if (confirm('⚠️ 警告：此操作将删除所有任务，且无法恢复！\n确定要全部清空吗？')) {
+                // 保存当前状态到撤销栈
+                saveStateToUndoStack();
+                todos = [];
+                saveTodos();
+                renderTodos();
+            }
+        }
+
+        // 保存任务到本地存储
+        function saveTodos() {
+            localStorage.setItem('todos', JSON.stringify(todos));
+        }
+
+        // 更新统计数据
+        function updateStats() {
+            const completed = todos.filter(todo => todo.completed).length;
+            const pending = todos.filter(todo => !todo.completed).length;
+            
+            completedCount.textContent = completed;
+            pendingCount.textContent = pending;
+        }
+    </script>
+</body>
+</html>
